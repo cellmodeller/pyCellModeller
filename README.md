@@ -1,43 +1,57 @@
 # pyCellModeller
 
-A Python-native reimplementation of CellModeller with a refactored **PyTorch-based engine** replacing the legacy **PyOpenCL/OpenCL** execution path.
+`pyCellModeller` is a Python-native, Torch-based rewrite of CellModeller.
 
-## Why this exists
+## Current status (bootstrap truth)
 
-CellModeller demonstrated a powerful model: define multicellular simulations in Python while accelerating the core numerical work on parallel hardware. But the legacy engine architecture is difficult to modernize, package, and extend.
+This repository is in an early bootstrap phase and currently implements only a small deterministic toy simulator:
 
-`pyCellModeller` starts fresh:
+- ✅ Public API exports: `Simulation`, `SimulationConfig`, `SimulationState`
+- ✅ CPU-first deterministic stepping path (tested)
+- ✅ Torch engine (`TorchEngine`) as the only execution backend in v1
+- ✅ Minimal example initialization (`initialize_example`) + single-step update (`step`)
+- 🚧 Mechanics / fields / biology / IO / CLI modules are scaffolded but not implemented yet
 
-- Python-native package structure
-- PyTorch as the tensor and execution engine
-- CPU-first correctness
-- CUDA support through PyTorch
-- clean separation between simulation logic and infrastructure
+**Important:** the historical PyOpenCL path is intentionally not carried forward. In v1, the project is Torch-only by design.
 
-## Project goals
+## Implemented API surface (today)
 
-The first goal is not feature parity with the historical codebase. The first goal is a **clean, modern, testable foundation** for multicellular simulation.
+Top-level import:
 
-Planned v1 priorities:
-- installable Python package
-- stable public API
-- Torch-backed simulation state
-- deterministic CPU reference behavior
-- NVIDIA GPU support through PyTorch CUDA
-- modular mechanics, fields, and biology layers
-- examples, tests, and reproducible workflows
+```python
+from pycellmodeller import Simulation, SimulationConfig, SimulationState
+```
 
-## High-level architecture
+Core usage:
 
-The codebase is organized around five layers:
+```python
+from pycellmodeller.api import Simulation, SimulationConfig
 
-- **API** — user-facing simulation construction and execution
-- **Core** — config, state, stepping contracts, events
-- **Engine** — Torch-backed state operations and numerical kernels
-- **Scientific modules** — mechanics, fields, biology
-- **Interfaces** — CLI, notebooks, IO, visualization adapters
+sim = Simulation(SimulationConfig(device="cpu", dt=0.1, seed=0))
+state0 = sim.initialize_example()
+state1 = sim.step()
+```
 
-## Expected repo layout
+### `SimulationConfig`
+
+Current fields:
+
+- `device: str | torch.device = "cpu"`
+- `dt: float = 0.1` (must be > 0)
+- `seed: int = 0` (must be >= 0)
+- `dtype: torch.dtype = torch.float32` (must be floating)
+
+### `SimulationState`
+
+Current fields:
+
+- `positions: torch.Tensor`
+- `velocities: torch.Tensor`
+- `time: float = 0.0`
+- `step_index: int = 0`
+- `metadata: dict[str, Any] = {}`
+
+## Current repository layout
 
 ```text
 pyCellModeller/
@@ -58,7 +72,6 @@ pyCellModeller/
       fields/
       biology/
       io/
-      viz/
       cli/
   tests/
     unit/
@@ -67,15 +80,20 @@ pyCellModeller/
   examples/
     scripts/
     notebooks/
-  docs/
-  docker/
-    cpu/
-    nvidia/
   .github/
     workflows/
 ```
 
-## Recommended local development
+> Note: folders such as `viz/`, `docs/`, and `docker/` are not present yet and are intentionally omitted from the current structure.
+
+## Scope for v1 bootstrap
+
+- Deterministic CPU reference behavior first
+- Torch tensor state and stepping loop first
+- No PyOpenCL compatibility layer
+- No multi-backend abstraction in v1
+
+## Development
 
 ```bash
 python -m venv .venv
@@ -84,45 +102,3 @@ pip install -U pip
 pip install -e ".[dev]"
 pytest
 ```
-
-## GPU workflow
-
-PyTorch should provide:
-- CPU execution by default
-- CUDA execution on Linux/NVIDIA systems with the correct PyTorch install
-
-Example validation step:
-
-```bash
-python -c "import torch; print(torch.cuda.is_available())"
-```
-
-## Container workflow
-
-Use containers for reproducibility and CI, not as the only supported way to run the package.
-
-Recommended approach:
-- CPU development container by default
-- optional NVIDIA-enabled development profile for Linux
-- avoid making containerization a prerequisite for normal local Python use
-
-## Quality bar
-
-Run these on every meaningful change:
-
-```bash
-ruff check .
-ruff format --check .
-pytest
-```
-
-## How ChatGPT and Codex should use this repo
-
-- ChatGPT owns planning, architecture, tradeoffs, and milestone sequencing.
-- Codex owns implementation, tests, and scoped file changes.
-- Large refactors should be guided by an ADR or written plan first.
-- PyTorch engine code should remain isolated from pure domain logic where possible.
-
-## Status
-
-This repository should be treated as a clean-slate project. Ignore prior structure and build the foundation from scratch.
