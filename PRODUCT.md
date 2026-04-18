@@ -1,112 +1,67 @@
 # PRODUCT
 
-## Problem
+## Product statement
 
-CellModeller is valuable scientifically, but the legacy PyOpenCL execution model makes modern local development, packaging, and extension harder than it should be.
+`pyCellModeller` is a clean-slate reimplementation of CellModeller focused on a Torch-based simulation core.
 
-Researchers need a modern implementation that:
-- runs locally in Python
-- is easier to test and maintain
-- supports current tensor and ML ecosystems
-- remains scientifically extensible
+For bootstrap v1, the product is intentionally narrow: **a deterministic CPU-first toy engine with a minimal public API**.
 
-## Target users
+## Explicit backend decision
 
-Primary users:
-- computational biology researchers
-- synthetic biology researchers
-- developers extending multicellular simulation models
+The PyOpenCL execution path is intentionally retired for this rewrite.
 
-Secondary users:
-- ML researchers using simulation-generated data
-- engineers integrating simulation into downstream tools
-- educators creating notebook-based demonstrations
+- v1 backend strategy: **Torch-only**
+- no PyOpenCL compatibility layer
+- no multi-backend architecture in bootstrap scope
 
-## Jobs to be done
+## Target users (current phase)
 
-Users need to:
-- define a simulation in Python
-- run it locally without legacy GPU tooling friction
-- extend rules for growth, mechanics, and signaling
-- generate trajectories and outputs for analysis
-- use Torch-native tensors and workflows where helpful
+- Developers establishing the simulation core architecture
+- Researchers validating deterministic stepping behavior
+- Contributors building future mechanics/biology/fields modules on a tested foundation
 
-## Goals
+## Current user value delivered
 
-### Core goals
-- replace the PyOpenCL engine with a PyTorch engine
-- make the package easy to run locally
-- establish a maintainable repo with tests and docs
-- support CPU and CUDA execution through PyTorch
-- create a stable foundation for future scientific extensions
+Users can currently:
+- install the package scaffold
+- import stable top-level API symbols
+- initialize a deterministic toy state
+- run deterministic CPU stepping
+- run unit/integration/regression tests for the implemented path
 
-### Strategic goals
-- enable AI/ML workflows around simulation outputs
-- make differentiable or learned components feasible later
-- improve onboarding for new contributors
-- support future service integration without polluting the core library
+## Current implemented API surface
 
-## Non-goals
+- `pycellmodeller.Simulation`
+- `pycellmodeller.SimulationConfig`
+- `pycellmodeller.SimulationState`
 
-For v1, do **not** attempt to:
-- reproduce every historical CellModeller feature
-- preserve the historical file layout
-- build a hosted platform
-- support every accelerator target
-- over-abstract into a generic simulation framework
+Supported flow:
+1. build config
+2. create simulation
+3. initialize example state
+4. step simulation deterministically
 
-## Main workflows
+## In-scope for current bootstrap
 
-### Workflow 1 — local scientist
-- install package
-- run a provided example
-- inspect outputs
-- tweak model parameters
+- CPU-first deterministic behavior as reference
+- torch tensor state model
+- minimal stepping kernel (`x <- x + v*dt`)
+- documentation and tests that match actual implementation
 
-### Workflow 2 — simulation developer
-- implement or modify a model rule
-- run tests on CPU
-- validate on CUDA if relevant
-- compare trajectories or summary outputs
+## Not yet implemented (intentionally)
 
-### Workflow 3 — ML researcher
-- run batches of simulations
-- export trajectories or summary metrics
-- feed outputs into Torch-based pipelines
+- production mechanics models
+- extracellular field simulation
+- biological rule engine
+- persistence/export workflows
+- rich CLI workflows
+- visualization module (`viz` directory not present)
+- repository `docs/` and `docker/` directories (not present)
 
-## v1 scope
+## Success criteria for this stage
 
-### In scope
-- package scaffold
-- public API
-- Torch engine
-- CPU reference execution
-- CUDA enablement path
-- minimal mechanics baseline
-- growth and division logic
-- tests, examples, docs, CI
-
-### Out of scope
-- full legacy parity
-- browser-first UI
-- service orchestration
-- broad visualization tooling
-- generalized backend support
-
-## Success criteria
-
-The first working version is successful if it can:
-- install cleanly in a new Python environment
-- run a toy multicellular simulation on CPU
-- use PyTorch as the execution engine
-- support a CUDA path for at least one representative example
-- save and inspect outputs
-- support contributor development with a clean repo structure
-
-## Product constraints
-
-- scientific behavior must remain understandable
-- engineering complexity should be introduced only when justified
-- CPU correctness remains mandatory
-- public API churn should be minimized
-- examples and docs are part of the product, not optional extras
+This stage is successful if:
+- documented API matches what imports and runs
+- deterministic CPU stepping remains stable under tests
+- architecture stays clean for future mechanics/fields/biology additions
+- docs clearly state that PyOpenCL was replaced by Torch-only v1
