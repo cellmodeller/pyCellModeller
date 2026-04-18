@@ -7,9 +7,20 @@ name = "pycellmodeller"
 version = "0.1.0"
 description = "PyTorch-powered cell simulation framework"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 license = { file = "LICENSE.md" }
 authors = [{ name = "pyCellModeller contributors" }]
+dependencies = [
+  "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.10",
+  "pytest>=8.0",
+  "ruff>=0.5",
+  "types-setuptools",
+]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -17,3 +28,46 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["pycellmodeller*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+  "ANN",
+  "N",
+  "RUF",
+]
+ignore = [
+  "ANN101", # no longer relevant on Python 3.11+, but kept for compatibility with older Ruff
+  "ANN102", # no longer relevant on Python 3.11+, but kept for compatibility with older Ruff
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pycellmodeller"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["pycellmodeller"]
+strict = true
+warn_unused_configs = true
+mypy_path = ["src"]
