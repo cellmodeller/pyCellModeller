@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator
 from dataclasses import dataclass
 
@@ -50,6 +51,20 @@ class CellView:
             device=self.state.velocities.device,
             dtype=self.state.velocities.dtype,
         )
+
+    @property
+    def direction(self) -> torch.Tensor:
+        return self.state.directions[self.index]
+
+    @direction.setter
+    def direction(self, value: torch.Tensor) -> None:
+        direction_tensor = value.to(device=self.state.directions.device, dtype=self.state.directions.dtype)
+        self.state.directions[self.index] = self.state.normalize_direction(direction_tensor)
+
+    @property
+    def angle(self) -> float:
+        direction = self.direction
+        return float(math.atan2(float(direction[1].item()), float(direction[0].item())))
 
     @property
     def length(self) -> float:

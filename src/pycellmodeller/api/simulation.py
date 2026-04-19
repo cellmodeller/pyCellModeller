@@ -63,6 +63,7 @@ class Simulation:
         )
         self._program.setup(self)
         self.state.divide[: self.state.n_cells] = False
+        self.state.normalize_active_directions()
         return self.state
 
     def add_cell(
@@ -71,6 +72,7 @@ class Simulation:
         parent_id: int = -1,
         position: torch.Tensor | None = None,
         velocity: torch.Tensor | None = None,
+        direction: torch.Tensor | None = None,
         length: float | None = None,
         radius: float = 0.5,
         target_volume: float = 1.0,
@@ -86,6 +88,7 @@ class Simulation:
             parent_id=parent_id,
             position=position,
             velocity=velocity,
+            direction=direction,
             length=resolved_length,
             radius=radius,
             target_volume=target_volume,
@@ -93,9 +96,9 @@ class Simulation:
             color=color,
             divide=divide,
         )
-        # Access state eagerly to keep sequencing explicit during debugging/hooks.
         _ = state
         self._program.initialize_cell(cell)
+        cell.direction = cell.direction
         return cell
 
     def step(self) -> SimulationState:
@@ -105,14 +108,18 @@ class Simulation:
 
         if state.n_cells > 0:
             state.divide[active] = False
+            state.normalize_active_directions()
 
         self._program.update_cells(self.cells)
 
         if state.n_cells > 0:
             state.lengths[active] = self._biophysics.grow(state.lengths[active], self._config.dt)
+            current_volumes = self._biophysics.compute_volume(state.lengths[active], state.radii[active])
             divide_mask = state.divide[active] | self._biophysics.should_divide(state.lengths[active])
+
             daughter_a_lengths, daughter_b_lengths = self._biophysics.divide(
                 state.lengths[active],
+                state.radii[active],
                 divide_mask,
                 generator=self._rng,
             )
@@ -125,19 +132,32 @@ class Simulation:
 
                 parent_position = parent.position.clone()
                 parent_velocity = parent.velocity.clone()
+                parent_direction = parent.direction.clone()
                 parent_color = parent.color.clone()
                 parent_radius = parent.radius
                 parent_target_volume = parent.target_volume
                 parent_growth_rate = parent.growth_rate
 
-                parent.length = float(daughter_a_lengths[idx].item())
+                daughter_a_length = float(daughter_a_lengths[idx].item())
+                daughter_b_length = float(daughter_b_lengths[idx].item())
+                daughter_a_pos, daughter_b_pos = self._biophysics.place_daughters(
+                    parent_position=parent_position,
+                    parent_direction=parent_direction,
+                    daughter_a_length=daughter_a_length,
+                    daughter_b_length=daughter_b_length,
+                    parent_radius=parent_radius,
+                )
+
+                parent.position = daughter_a_pos
+                parent.length = daughter_a_length
                 parent.divide = False
 
                 daughter_b = self.add_cell(
                     parent_id=parent_id,
-                    position=parent_position,
+                    position=daughter_b_pos,
                     velocity=parent_velocity,
-                    length=float(daughter_b_lengths[idx].item()),
+                    direction=parent_direction,
+                    length=daughter_b_length,
                     radius=parent_radius,
                     target_volume=parent_target_volume,
                     growth_rate=parent_growth_rate,
@@ -146,6 +166,16 @@ class Simulation:
                 )
                 daughter_a = self.cells.by_index(idx)
                 self._program.on_division(parent, daughter_a, daughter_b)
+
+            active = state.active_slice()
+            state.positions[active] = self._biophysics.resolve_contacts(
+                positions=state.positions[active],
+                directions=state.directions[active],
+                lengths=state.lengths[active],
+                radii=state.radii[active],
+            )
+            state.normalize_active_directions()
+            _ = current_volumes
 
         self._engine.step(state)
         return state

@@ -10,7 +10,9 @@ This repository is in an early bootstrap phase and currently implements only a s
 - ✅ CPU-first deterministic stepping path (tested)
 - ✅ Torch engine (`TorchEngine`) as the only execution backend in v1
 - ✅ Native initialization + stepping flow via `Simulation(config, biophysics, program)`
-- 🚧 Mechanics / fields / biology / IO / CLI modules are scaffolded but not implemented yet
+- ✅ Native Torch bacterium supports oriented rods, growth/division, and first-pass contact relaxation
+- ✅ Tutorial 1 native example can dump PNG frames of spatial colony growth
+- 🚧 Mechanics / fields / biology / IO / CLI modules are scaffolded but not fully implemented yet
 
 **Important:** legacy CellModeller compatibility is **not** a v1 goal. Historical PyOpenCL/OpenCL execution paths are intentionally not carried forward.
 
@@ -54,13 +56,19 @@ Current fields:
 
 - `positions: torch.Tensor`
 - `velocities: torch.Tensor`
+- `directions: torch.Tensor` (shape `(capacity, 2)`, unit vectors)
 - `time: float = 0.0`
 - `step_index: int = 0`
 - `metadata: dict[str, Any] = {}`
 
 ## Next milestone
 
-The next milestone is a **native Tutorial 1-style example** implemented directly in pyCellModeller APIs (not legacy tutorial file execution).
+Current milestone delivers the first spatial native colony simulation:
+
+- oriented 2D rods (`position`, `direction`, `length`, `radius`)
+- mass-conserving rod division with non-overlapping daughter placement
+- first-pass capsule contact relaxation for colony spreading
+- frame dumping from `examples/tutorials/tutorial_1_native.py` for video generation
 
 ## Current repository layout
 

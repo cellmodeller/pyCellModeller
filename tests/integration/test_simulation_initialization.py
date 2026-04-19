@@ -24,6 +24,7 @@ def test_initialize_creates_empty_state_with_configured_dtype_and_device() -> No
     assert state.positions.shape == (0, 2)
     assert state.velocities.shape == (0, 2)
     assert state.positions.dtype is torch.float64
+    assert state.directions.shape == (0, 2)
     assert state.velocities.dtype is torch.float64
     assert state.positions.device.type == "cpu"
     assert state.velocities.device.type == "cpu"

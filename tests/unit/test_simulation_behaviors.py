@@ -66,6 +66,7 @@ def test_structured_state_initialization_defaults_and_custom_values() -> None:
     assert state.n_cells == 1
     assert torch.allclose(state.positions[0], torch.tensor([1.0, -2.0]))
     assert torch.allclose(state.velocities[0], torch.tensor([0.5, 0.25]))
+    assert torch.allclose(state.directions[0], torch.tensor([1.0, 0.0]))
     assert float(state.lengths[0]) == pytest.approx(1.3)
     assert float(state.radii[0]) == pytest.approx(0.6)
     assert float(state.target_volume[0]) == pytest.approx(2.7)
@@ -79,11 +80,14 @@ def test_division_split_correctness_without_noise() -> None:
     lengths = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
     divide_mask = torch.tensor([False, True, True])
 
-    daughter_a, daughter_b = model.divide(lengths, divide_mask)
+    radii = torch.tensor([0.5, 0.5, 0.5], dtype=torch.float32)
+    daughter_a, daughter_b = model.divide(lengths, radii, divide_mask)
 
-    assert torch.allclose(daughter_a, torch.tensor([1.0, 1.0, 1.5]))
-    assert torch.allclose(daughter_b, torch.tensor([1.0, 1.0, 1.5]))
-    assert torch.allclose((daughter_a + daughter_b)[divide_mask], lengths[divide_mask])
+    assert torch.allclose(daughter_a[~divide_mask], lengths[~divide_mask])
+    assert torch.allclose(daughter_b[~divide_mask], lengths[~divide_mask])
+    parent_volume = model.compute_volume(lengths[divide_mask], radii[divide_mask])
+    daughters_volume = model.compute_volume(daughter_a[divide_mask], radii[divide_mask]) + model.compute_volume(daughter_b[divide_mask], radii[divide_mask])
+    assert torch.allclose(parent_volume, daughters_volume, atol=1e-6, rtol=1e-6)
 
 
 def test_callback_invocation_order_for_single_division_step() -> None:

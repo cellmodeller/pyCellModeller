@@ -17,7 +17,11 @@ class NoOpProgram(CellProgram):
 def test_cpu_step_is_deterministic_with_fixed_seed_and_expected_values() -> None:
     """Fixed-seed CPU stepping should produce stable numeric outputs."""
     config = SimulationConfig(device="cpu", dt=0.1, seed=123, dtype=torch.float32)
-    simulation = Simulation(config, TorchBacterium(growth_rate=0.0, division_length=10.0), NoOpProgram())
+    simulation = Simulation(
+        config,
+        TorchBacterium(growth_rate=0.0, division_length=10.0, contact_iterations=0),
+        NoOpProgram(),
+    )
     initial_state = simulation.initialize()
     simulation.add_cell(position=torch.tensor([0.0, 0.0]), velocity=torch.tensor([0.25, 0.0]))
     simulation.add_cell(position=torch.tensor([1.0, 0.0]), velocity=torch.tensor([0.0, 0.25]))
