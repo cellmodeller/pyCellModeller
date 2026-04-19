@@ -38,23 +38,30 @@ class TorchEngine:
         time: float = 0.0,
         step_index: int = 0,
     ) -> SimulationState:
-        """Move input tensors to the configured target and wrap in SimulationState."""
+        """Move input tensors to configured target and allocate full state tensors."""
         positions_on_device = positions.to(device=self._config.device, dtype=self._config.dtype)
         velocities_on_device = velocities.to(device=self._config.device, dtype=self._config.dtype)
-        return SimulationState(
-            positions=positions_on_device,
-            velocities=velocities_on_device,
+
+        n_cells = int(positions_on_device.shape[0])
+        state = SimulationState.allocate(
+            capacity=n_cells,
+            device=self._config.device,
+            dtype=self._config.dtype,
+            spatial_dim=int(positions_on_device.shape[1]),
             time=time,
             step_index=step_index,
         )
+        state.positions[:n_cells] = positions_on_device
+        state.velocities[:n_cells] = velocities_on_device
+        state.n_cells = n_cells
+        state.cell_ids[:n_cells] = torch.arange(n_cells, dtype=torch.int64, device=self._config.device)
+        state.next_cell_id = n_cells
+        return state
 
     def step(self, state: SimulationState) -> SimulationState:
         """Advance state with a deterministic, fixed-velocity position update."""
-        new_positions = state.positions + (state.velocities * self._config.dt)
-        return SimulationState(
-            positions=new_positions,
-            velocities=state.velocities,
-            time=state.time + self._config.dt,
-            step_index=state.step_index + 1,
-            metadata=dict(state.metadata),
-        )
+        active = state.active_slice()
+        state.positions[active] = state.positions[active] + (state.velocities[active] * self._config.dt)
+        state.time += self._config.dt
+        state.step_index += 1
+        return state
