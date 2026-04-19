@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
-from pycellmodeller import Simulation, SimulationConfig
+import torch
+
+from pycellmodeller import CellProgram, Simulation, SimulationConfig, TorchBacterium
+
+
+class NoOpProgram(CellProgram):
+    """Minimal program used for deterministic stepping demos."""
 
 
 def main() -> None:
     config = SimulationConfig(device="cpu", dt=0.1, seed=1)
-    simulation = Simulation(config)
+    simulation = Simulation(
+        config=config,
+        biophysics=TorchBacterium(growth_rate=0.0, division_length=10.0),
+        program=NoOpProgram(),
+    )
 
-    simulation.initialize_example()
+    simulation.initialize()
+    simulation.add_cell(position=torch.tensor([0.0, 0.0]), velocity=torch.tensor([0.25, 0.0]))
+    simulation.add_cell(position=torch.tensor([1.0, 0.0]), velocity=torch.tensor([0.0, 0.25]))
     state = simulation.step()
 
     summary = {
