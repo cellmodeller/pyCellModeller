@@ -1,6 +1,6 @@
 # pyCellModeller
 
-`pyCellModeller` is a Python-native, Torch-based rewrite of CellModeller.
+`pyCellModeller` is a Torch-native rewrite of CellModeller.
 
 ## Current status (bootstrap truth)
 
@@ -12,7 +12,7 @@ This repository is in an early bootstrap phase and currently implements only a s
 - ✅ Minimal example initialization (`initialize_example`) + single-step update (`step`)
 - 🚧 Mechanics / fields / biology / IO / CLI modules are scaffolded but not implemented yet
 
-**Important:** the historical PyOpenCL path is intentionally not carried forward. In v1, the project is Torch-only by design.
+**Important:** legacy CellModeller compatibility is **not** a v1 goal. Historical PyOpenCL/OpenCL execution paths are intentionally not carried forward.
 
 ## Implemented API surface (today)
 
@@ -50,6 +50,10 @@ Current fields:
 - `time: float = 0.0`
 - `step_index: int = 0`
 - `metadata: dict[str, Any] = {}`
+
+## Next milestone
+
+The next milestone is a **native Tutorial 1-style example** implemented directly in pyCellModeller APIs (not legacy tutorial file execution).
 
 ## Current repository layout
 
@@ -90,7 +94,7 @@ pyCellModeller/
 
 - Deterministic CPU reference behavior first
 - Torch tensor state and stepping loop first
-- No PyOpenCL compatibility layer
+- No legacy compatibility shims unless explicitly requested
 - No multi-backend abstraction in v1
 
 ## Development
