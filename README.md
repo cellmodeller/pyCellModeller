@@ -9,7 +9,7 @@ This repository is in an early bootstrap phase and currently implements only a s
 - ✅ Public API exports: `Simulation`, `SimulationConfig`, `SimulationState`
 - ✅ CPU-first deterministic stepping path (tested)
 - ✅ Torch engine (`TorchEngine`) as the only execution backend in v1
-- ✅ Minimal example initialization (`initialize_example`) + single-step update (`step`)
+- ✅ Native initialization + stepping flow via `Simulation(config, biophysics, program)`
 - 🚧 Mechanics / fields / biology / IO / CLI modules are scaffolded but not implemented yet
 
 **Important:** legacy CellModeller compatibility is **not** a v1 goal. Historical PyOpenCL/OpenCL execution paths are intentionally not carried forward.
@@ -25,10 +25,17 @@ from pycellmodeller import Simulation, SimulationConfig, SimulationState
 Core usage:
 
 ```python
-from pycellmodeller.api import Simulation, SimulationConfig
+from pycellmodeller import CellProgram, Simulation, SimulationConfig, TorchBacterium
 
-sim = Simulation(SimulationConfig(device="cpu", dt=0.1, seed=0))
-state0 = sim.initialize_example()
+class NoOpProgram(CellProgram):
+    pass
+
+sim = Simulation(
+    config=SimulationConfig(device="cpu", dt=0.1, seed=0),
+    biophysics=TorchBacterium(),
+    program=NoOpProgram(),
+)
+state0 = sim.initialize()
 state1 = sim.step()
 ```
 
