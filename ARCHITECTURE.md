@@ -2,9 +2,27 @@
 
 ## System overview
 
-`pyCellModeller` is currently a **CPU-first deterministic toy simulation engine** implemented with PyTorch tensors.
+`pyCellModeller` is a **Torch-native, CPU-first deterministic simulation runtime**.
 
-The historical PyOpenCL/OpenCL engine direction is intentionally replaced by a **Torch-only v1 path**. There is no compatibility layer for PyOpenCL in this codebase.
+The historical PyOpenCL/OpenCL engine direction is intentionally retired. Public APIs should not include CL/OpenCL compatibility naming.
+
+## Core runtime concepts
+
+### `Simulation`
+
+`Simulation` is the top-level runtime orchestrator. It owns lifecycle operations such as deterministic initialization and stepping, and coordinates configuration, engine execution, and state updates.
+
+### `TorchBacterium`
+
+`TorchBacterium` is the canonical per-cell runtime representation for Torch-native biology/mechanics workflows. It is conceptually backed by structured tensor state rather than legacy object/CL-compatible wrappers.
+
+### `CellProgram`
+
+`CellProgram` defines per-cell behavioral logic in the native pyCellModeller architecture. Programs operate over runtime cell state semantics and are intended to compose with Torch execution, not legacy tutorial-file compatibility layers.
+
+### Structured tensor-backed cell state
+
+Cell state is represented as structured, tensor-backed data (positions, velocities, and future extensible fields) validated for shape/device/dtype consistency. This is the foundation for deterministic stepping and future mechanics/biology extension.
 
 ## Current implemented layers
 
@@ -44,36 +62,12 @@ Current placeholders:
 - `pycellmodeller.io`
 - `pycellmodeller.cli`
 
-## Current runtime data model
-
-### `SimulationConfig`
-- `device`
-- `dt`
-- `seed`
-- `dtype`
-
-### `SimulationState`
-- `positions`
-- `velocities`
-- `time`
-- `step_index`
-- `metadata`
-
-No field grid, cell lineage schema, or event queue orchestration is wired into stepping yet.
-
-## Current execution flow
-
-1. User creates `SimulationConfig`
-2. User creates `Simulation(config)`
-3. `initialize_example()` produces a deterministic 2-cell tensor state
-4. `step()` applies `positions + velocities * dt`
-5. New `SimulationState` is returned with incremented time and step index
-
 ## Determinism and device model
 
-- CPU determinism is the reference behavior for this phase.
-- CUDA can be requested through `SimulationConfig(device=...)` where PyTorch supports it, but CPU correctness is the active baseline.
+- CPU correctness is the reference behavior for this phase.
+- CUDA can be requested through `SimulationConfig(device=...)` where PyTorch supports it, but deterministic CPU behavior is the baseline acceptance path.
 - No alternative backend abstraction is implemented.
+- CL/OpenCL compatibility naming is explicitly excluded from public APIs.
 
 ## Current directory structure (implemented)
 

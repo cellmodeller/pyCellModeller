@@ -2,16 +2,17 @@
 
 ## Product statement
 
-`pyCellModeller` is a clean-slate reimplementation of CellModeller focused on a Torch-based simulation core.
+`pyCellModeller` is a clean-slate reimplementation of CellModeller focused on a Torch-native simulation core.
 
-For bootstrap v1, the product is intentionally narrow: **a deterministic CPU-first toy engine with a minimal public API**.
+For bootstrap v1, the product is intentionally narrow: **a deterministic CPU-first engine with a minimal public API and native tutorial semantics**.
 
-## Explicit backend decision
+## Explicit backend and compatibility decision
 
-The PyOpenCL execution path is intentionally retired for this rewrite.
+Legacy PyOpenCL/OpenCL execution paths are intentionally retired for this rewrite.
 
 - v1 backend strategy: **Torch-only**
-- no PyOpenCL compatibility layer
+- no CL/OpenCL naming in public APIs
+- no compatibility shims unless explicitly requested
 - no multi-backend architecture in bootstrap scope
 
 ## Target users (current phase)
@@ -47,6 +48,7 @@ Supported flow:
 - torch tensor state model
 - minimal stepping kernel (`x <- x + v*dt`)
 - documentation and tests that match actual implementation
+- milestone progression toward native tutorial examples
 
 ## Not yet implemented (intentionally)
 
@@ -64,4 +66,5 @@ This stage is successful if:
 - documented API matches what imports and runs
 - deterministic CPU stepping remains stable under tests
 - architecture stays clean for future mechanics/fields/biology additions
-- docs clearly state that PyOpenCL was replaced by Torch-only v1
+- a native pyCellModeller **Tutorial 1 equivalent** runs with semantic parity
+- success does **not** depend on executing legacy tutorial files unchanged

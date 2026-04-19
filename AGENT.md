@@ -71,3 +71,10 @@ Create/update ADRs when:
 - Keep this repository as a clean rewrite, not a PyOpenCL port.
 - Keep bootstrap scope narrow and truthful.
 - Prefer clarity and determinism over premature optimization.
+
+## API and compatibility guardrails
+
+- Do not introduce CL/OpenCL names in public APIs.
+- Do not add compatibility shims unless explicitly requested by maintainers.
+- Preserve Torch-native naming and architecture decisions across docs and code.
+
