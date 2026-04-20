@@ -14,6 +14,7 @@ class SimulationState:
 
     positions: torch.Tensor
     velocities: torch.Tensor
+    directions: torch.Tensor
     lengths: torch.Tensor
     radii: torch.Tensor
     cell_ids: torch.Tensor
@@ -45,10 +46,18 @@ class SimulationState:
         if capacity < 0:
             msg = "capacity must be non-negative"
             raise ValueError(msg)
+        if spatial_dim != 2:
+            msg = "v1 state supports only 2D spatial_dim=2"
+            raise ValueError(msg)
+
+        directions = torch.zeros((capacity, spatial_dim), dtype=dtype, device=device)
+        if capacity > 0:
+            directions[:, 0] = 1.0
 
         return cls(
             positions=torch.zeros((capacity, spatial_dim), dtype=dtype, device=device),
             velocities=torch.zeros((capacity, spatial_dim), dtype=dtype, device=device),
+            directions=directions,
             lengths=torch.ones((capacity,), dtype=dtype, device=device),
             radii=torch.full((capacity,), 0.5, dtype=dtype, device=device),
             cell_ids=torch.full((capacity,), -1, dtype=torch.int64, device=device),
@@ -70,9 +79,16 @@ class SimulationState:
             raise ValueError(msg)
 
         capacity, spatial_dim = self.positions.shape
+        if spatial_dim != 2:
+            msg = "positions must use 2D coordinates"
+            raise ValueError(msg)
 
         if self.velocities.shape != (capacity, spatial_dim):
             msg = "velocities must match positions shape"
+            raise ValueError(msg)
+
+        if self.directions.shape != (capacity, spatial_dim):
+            msg = "directions must match positions shape"
             raise ValueError(msg)
 
         if self.lengths.shape != (capacity,):
@@ -110,6 +126,7 @@ class SimulationState:
         tensor_fields = (
             self.positions,
             self.velocities,
+            self.directions,
             self.lengths,
             self.radii,
             self.target_volume,
@@ -165,6 +182,34 @@ class SimulationState:
     def capacity(self) -> int:
         return int(self.positions.shape[0])
 
+    @staticmethod
+    def normalize_direction(direction: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
+        """Normalize one 2D direction vector with safe fallback to +x."""
+        if direction.shape != (2,):
+            msg = "direction must have shape (2,)"
+            raise ValueError(msg)
+        out = direction.clone()
+        norm = torch.linalg.vector_norm(out)
+        if float(norm.item()) <= eps:
+            out.zero_()
+            out[0] = 1.0
+            return out
+        return out / norm
+
+    def normalize_active_directions(self, eps: float = 1e-12) -> None:
+        """Normalize all active directions in-place."""
+        if self.n_cells == 0:
+            return
+        active = self.active_slice()
+        dirs = self.directions[active]
+        norms = torch.linalg.vector_norm(dirs, dim=1, keepdim=True)
+        invalid = norms.squeeze(1) <= eps
+        safe_norms = torch.where(invalid.unsqueeze(1), torch.ones_like(norms), norms)
+        dirs = dirs / safe_norms
+        if torch.any(invalid):
+            dirs[invalid] = torch.tensor([1.0, 0.0], dtype=dirs.dtype, device=dirs.device)
+        self.directions[active] = dirs
+
     def _ensure_capacity(self, required: int) -> None:
         if required <= self.capacity:
             return
@@ -172,6 +217,7 @@ class SimulationState:
         new_capacity = max(required, max(1, self.capacity * 2))
         self.positions = self._expand_2d(self.positions, new_capacity, fill_value=0.0)
         self.velocities = self._expand_2d(self.velocities, new_capacity, fill_value=0.0)
+        self.directions = self._expand_2d(self.directions, new_capacity, fill_value=0.0)
         self.lengths = self._expand_1d(self.lengths, new_capacity, fill_value=1.0)
         self.radii = self._expand_1d(self.radii, new_capacity, fill_value=0.5)
         self.cell_ids = self._expand_1d(self.cell_ids, new_capacity, fill_value=-1)
@@ -180,6 +226,9 @@ class SimulationState:
         self.growth_rate = self._expand_1d(self.growth_rate, new_capacity, fill_value=0.0)
         self.color = self._expand_2d(self.color, new_capacity, fill_value=1.0)
         self.divide = self._expand_1d(self.divide, new_capacity, fill_value=False)
+
+        if self.n_cells < new_capacity:
+            self.directions[self.n_cells :, 0] = 1.0
 
     def _expand_1d(self, tensor: torch.Tensor, new_capacity: int, fill_value: float | int | bool) -> torch.Tensor:
         out = torch.full((new_capacity,), fill_value=fill_value, dtype=tensor.dtype, device=tensor.device)
@@ -197,6 +246,7 @@ class SimulationState:
         parent_id: int = -1,
         position: torch.Tensor | None = None,
         velocity: torch.Tensor | None = None,
+        direction: torch.Tensor | None = None,
         length: float = 1.0,
         radius: float = 0.5,
         target_volume: float = 1.0,
@@ -232,6 +282,15 @@ class SimulationState:
                 msg = f"velocity must have shape ({spatial_dim},)"
                 raise ValueError(msg)
             self.velocities[idx] = vel
+
+        if direction is None:
+            self.directions[idx] = torch.tensor([1.0, 0.0], dtype=self.directions.dtype, device=self.directions.device)
+        else:
+            direction_tensor = direction.to(device=self.directions.device, dtype=self.directions.dtype)
+            if direction_tensor.shape != (spatial_dim,):
+                msg = f"direction must have shape ({spatial_dim},)"
+                raise ValueError(msg)
+            self.directions[idx] = self.normalize_direction(direction_tensor)
 
         if color is None:
             self.color[idx].fill_(1.0)

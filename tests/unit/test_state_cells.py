@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import torch
 
 from pycellmodeller.core.cells import CellCollection
@@ -21,6 +22,7 @@ def test_add_cell_assigns_id_parent_and_biological_defaults() -> None:
     assert torch.isclose(state.target_volume[1], torch.tensor(2.5))
     assert torch.isclose(state.growth_rate[1], torch.tensor(0.12))
     assert bool(state.divide[1].item()) is True
+    assert torch.allclose(state.directions[0], torch.tensor([1.0, 0.0]))
 
 
 def test_cell_collection_view_supports_read_and_write_access() -> None:
@@ -33,9 +35,12 @@ def test_cell_collection_view_supports_read_and_write_access() -> None:
     cell.growth_rate = 0.25
     cell.color = torch.tensor([0.2, 0.5, 1.0])
     cell.divide = True
+    cell.direction = torch.tensor([0.0, 2.0])
 
     assert cell.id == 1
     assert float(state.target_volume[1]) == 4.0
     assert float(state.growth_rate[1]) == 0.25
     assert torch.allclose(state.color[1], torch.tensor([0.2, 0.5, 1.0]))
     assert bool(state.divide[1]) is True
+    assert torch.allclose(state.directions[1], torch.tensor([0.0, 1.0]))
+    assert cell.angle == pytest.approx(float(torch.pi / 2), abs=1e-6)
