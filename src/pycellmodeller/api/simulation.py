@@ -116,6 +116,10 @@ class Simulation:
             state.lengths[active] = self._biophysics.grow(state.lengths[active], self._config.dt)
             current_volumes = self._biophysics.compute_volume(state.lengths[active], state.radii[active])
             divide_mask = state.divide[active] | self._biophysics.should_divide(state.lengths[active])
+            divide_mask = divide_mask & self._biophysics.supports_longitudinal_division(
+                state.lengths[active],
+                state.radii[active],
+            )
 
             daughter_a_lengths, daughter_b_lengths = self._biophysics.divide(
                 state.lengths[active],

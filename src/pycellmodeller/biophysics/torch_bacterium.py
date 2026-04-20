@@ -77,6 +77,14 @@ class TorchBacterium:
         """Return a boolean mask indicating which cells are ready to divide."""
         return lengths >= self.division_length
 
+    def supports_longitudinal_division(self, lengths: torch.Tensor, radii: torch.Tensor) -> torch.Tensor:
+        """Return a mask of cells that can divide into two non-negative cylindrical daughters."""
+        if lengths.shape != radii.shape:
+            msg = "lengths and radii must have the same shape"
+            raise ValueError(msg)
+        minimum_parent_length = (4.0 / 3.0) * radii
+        return lengths >= minimum_parent_length
+
     def compute_volume(self, lengths: torch.Tensor, radii: torch.Tensor) -> torch.Tensor:
         """Compute 2D spherocylinder-equivalent 3D volume."""
         if lengths.shape != radii.shape:
@@ -129,6 +137,10 @@ class TorchBacterium:
 
         daughter_a_volume = parent_volume * frac
         daughter_b_volume = parent_volume - daughter_a_volume
+
+        cap_volume = (4.0 / 3.0) * math.pi * torch.pow(parent_radii, 3)
+        daughter_a_volume = torch.clamp(daughter_a_volume, min=cap_volume)
+        daughter_b_volume = torch.clamp(daughter_b_volume, min=cap_volume)
 
         a = self._length_from_volume(daughter_a_volume, parent_radii)
         b = self._length_from_volume(daughter_b_volume, parent_radii)

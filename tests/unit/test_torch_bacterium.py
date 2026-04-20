@@ -62,3 +62,27 @@ def test_non_overlapping_daughter_placement() -> None:
     center_distance = float(torch.linalg.vector_norm(pos_b - pos_a).item())
     minimum_distance = (1.6 + 1.4) * 0.5 + (2.0 * 0.5) + model.contact_gap
     assert center_distance >= minimum_distance - 1e-6
+
+
+def test_longitudinal_division_requires_sufficient_parent_length() -> None:
+    model = TorchBacterium()
+    lengths = torch.tensor([0.5, 0.8], dtype=torch.float32)
+    radii = torch.tensor([0.5, 0.5], dtype=torch.float32)
+
+    supported = model.supports_longitudinal_division(lengths, radii)
+
+    assert torch.equal(supported, torch.tensor([False, True]))
+
+
+def test_divide_produces_non_negative_daughter_lengths_with_noise() -> None:
+    model = TorchBacterium(partition_noise_std=0.2)
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(3)
+    lengths = torch.tensor([0.8], dtype=torch.float32)
+    radii = torch.tensor([0.5], dtype=torch.float32)
+    divide_mask = torch.tensor([True])
+
+    daughter_a, daughter_b = model.divide(lengths, radii, divide_mask, generator=generator)
+
+    assert float(daughter_a[0].item()) >= 0.0
+    assert float(daughter_b[0].item()) >= 0.0
